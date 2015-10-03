@@ -1,0 +1,4 @@
+bench-results-*
+bench-data
+*.pyc
+linux-*
