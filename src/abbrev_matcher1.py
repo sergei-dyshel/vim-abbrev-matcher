@@ -23,28 +23,24 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+from __future__ import print_function
+
 import os
 import os.path
 import sys
+import logging
 
-try:
-    # import re2
-    import pcre as re2
-    has_re2 = True
-except ImportError:
-    has_re2 = False
 
-try:
-    import vim
-except:
-    pass
+RE_SYNTAXES = ['general', 'vim']
 
-RE_ENGINES = ['pcre', 're2']  # in the order of preference
 
-REGEX_ENGINES = ['general', 'vim']
+# for embedded use
+logging.basicConfig(format='[abbrev_matcher.py] %(message)s',
+                    level=logging.WARNING)
+
 
 def MatchGenerator(pattern, string, offset=0):
-    """Generate matches of `pattern` in `string`."""
+    """Recursively generate matches of `pattern` in `string`."""
 
     def _find_ignorecase(string, char, start=0):
         """Find first occurrence of `char` inside `string`,
@@ -98,15 +94,16 @@ def MatchGenerator(pattern, string, offset=0):
         i = _find_ignorecase(string, abbrev_0, i + 1)
 
 
-def make_regex(pattern, engine='general', escape=False):
+def make_regex(pattern, syntax='general', escape=False):
     """Build regular expression corresponding to `pattern`."""
 
-    assert engine in REGEX_ENGINES
+    assert syntax in RE_SYNTAXES
 
     def re_group(r):
-        if engine == 'vim':
+        if syntax == 'vim':
             return r'%(' + r + r')'
-        return r'(?:' + r + r')'
+        # return r'(?:' + r + r')'
+        return r'(' + r + r')'
 
     def re_or(r1, r2):
         return re_group(re_group(r1) + '|' + re_group(r2))
@@ -115,7 +112,7 @@ def make_regex(pattern, engine='general', escape=False):
         return re_group(r) + '?'
 
     res = ''
-    if engine == 'vim':
+    if syntax == 'vim':
         res += r'\v'
     res += '^'
     for i, ch in enumerate(pattern):
@@ -143,6 +140,8 @@ class BaseMatcher(object):
 
 
 class SlowMatcher(BaseMatcher):
+    """Matches using recursive algorithm."""
+
     def __init__(self, pattern):
         self.pattern = pattern
 
@@ -155,35 +154,43 @@ class SlowMatcher(BaseMatcher):
             return None
 
 
-class RE2Matcher(BaseMatcher):
-    def __init__(self, pattern):
-        self.pattern = pattern
-        regex = make_regex(pattern, engine='general')
-        self.comp_regex = re2.compile(regex)
-
-    def match(self, string):
-        return re2.match(self.comp_regex, string)
-
-
 class RegexMatcher(BaseMatcher):
+    """Matches using regular expression."""
+
+    RE_ENGINES = ['pcre', 're2']  # in the order of preference
+
     def __init__(self, pattern, re_engine):
-        self.re_engine = __import__(re_engine)
+        self.re_module = __import__(re_engine)
         self.pattern = pattern
-        regex = make_regex(pattern, engine='general')
-        self.comp_regex = re_engine.compile(regex)
+        regex = make_regex(pattern, syntax='general')
+        self.comp_regex = self.re_module.compile(regex)
 
     def match(self, string):
-        return re2.match(self.comp_regex, string)
+        return self.re_module.match(self.comp_regex, string)
 
 
-def create_matcher(pattern, use_re2=None):
-    if use_re2 == True and not has_re2:
-        raise Exception('Google RE2 not found!')
-    if has_re2 and use_re2 != False:
-        return RE2Matcher(pattern)
-    if use_re2 != False:
-        print >>sys.stderr, "Google RE2 not found, using slow algorithm"
+def create_matcher(pattern, re_engine='auto'):
+    """Create specific or best-available matcher."""
+
+    if re_engine != 'no':
+        for curr_engine in RegexMatcher.RE_ENGINES:
+            if re_engine != 'auto' and re_engine != curr_engine:
+                continue
+            try:
+                matcher = RegexMatcher(pattern, re_engine=curr_engine)
+                logging.info('using {curr_engine} engine'.format(**locals()))
+                return matcher
+            except ImportError:
+                msg = '{curr_engine} engine not found'.format(**locals())
+                if re_engine == 'auto':
+                    logging.info(msg)
+                else:  # 'no'
+                    logging.error(msg)
+        logging.warning('no regex engine found, falling back to slow method')
+    else:
+        logging.info('using slow matching algorithm')
     return SlowMatcher(pattern)
+
 
 class Ranker(object):
     def __init__(self, pattern, is_file=False):
@@ -221,6 +228,7 @@ class Ranker(object):
 
 
 def filter_unite():
+    import vim
     pattern = vim.eval('input')
     candidates = vim.eval('candidates')
     matcher = create_matcher(pattern)
@@ -232,6 +240,7 @@ def filter_unite():
 
 
 def filter_ctrlp():
+    import vim
     items = vim.eval('a:items')
     pattern = vim.eval('a:str')
     limit = int(vim.eval('a:limit'))
@@ -254,29 +263,52 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--re_engine',
-                        choices=RE_ENGINES + ['no', 'auto'],
+    parser.add_argument('-d', '--debug',
+                        action='store_const',
+                        dest='loglevel',
+                        const=logging.DEBUG,
+                        default=logging.WARNING)
+    parser.add_argument('-v', '--verbose',
+                        action='store_const',
+                        dest='loglevel',
+                        const=logging.INFO)
+    parser.add_argument('--re-engine',
+                        choices=RegexMatcher.RE_ENGINES + ['no', 'auto'],
                         default='auto')
+    parser.add_argument('--no-re',
+                        action='store_const',
+                        dest='re_engine',
+                        const='no',
+                        help='same as --re_engine=no')
+    parser.add_argument('--pcre',
+                        action='store_const',
+                        dest='re_engine',
+                        const='pcre',
+                        help='same as --re_engine=pcre')
+    parser.add_argument('--re2',
+                        action='store_const',
+                        dest='re_engine',
+                        const='re2',
+                        help='same as --re_engine=re2')
     parser.add_argument('--rank',
                         choices=['no', 'general', 'file'],
                         default='no')
     parser.add_argument('--reverse', action='store_true', default=False)
-    parser.add_argument('--regex', choices=REGEX_ENGINES)
+    parser.add_argument('--regex-only', action='store_true', default=False)
     parser.add_argument('pattern')
     args = parser.parse_args()
 
-    use_re2 = {'re2': True, 'simple': False, 'auto': None}[args.method]
-    if args.debug:
-        for engine in REGEX_ENGINES:
-            print '{} regex: {}'.format(engine, make_regex(args.pattern,
-                                                           engine=engine,
-                                                           escape=True))
-    if args.regex is not None:
-        print make_regex(args.pattern, engine=args.regex, escape=True)
+    logging.basicConfig(format='%(message)s', level=args.loglevel)
+
+    for syntax in RE_SYNTAXES:
+        regex = make_regex(args.pattern, syntax=syntax, escape=True)
+        logging.debug('{syntax} regex: {regex}'.format(**locals()))
+
+    if args.regex_only:
+        print(make_regex(args.pattern, syntax='general', escape=True), end='')
         return 0
 
-    matcher = create_matcher(args.pattern, use_re2=use_re2)
+    matcher = create_matcher(args.pattern, re_engine=args.re_engine)
 
     results = filter(matcher.match, sys.stdin)
     if args.rank != 'no':
@@ -284,9 +316,9 @@ def main():
         results.sort(key=ranker.rank, reverse=args.reverse)
 
     for line in results:
-        if args.rank and args.debug:
-            print ranker.rank(line),
-        print line,
+        if args.rank and args.loglevel <= logging.DEBUG:
+            print(ranker.rank(line), end=' ')
+        print(line, end='')
 
     return 0 if results else 1
 
