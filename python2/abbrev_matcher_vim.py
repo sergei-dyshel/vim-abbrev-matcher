@@ -104,7 +104,6 @@ def sort_unite():
 
 def filter_ctrlp():
     items = vim.eval('a:items')
-    results = vim.bindeval('results')
     pattern = vim.eval('a:str')
     limit = int(vim.eval('a:limit'))
     ispath = vim.eval('a:ispath')
@@ -123,5 +122,5 @@ def filter_ctrlp():
     items.sort(key=rank)
     items[limit:] = []
 
-    results[:] = items
+    return items
 

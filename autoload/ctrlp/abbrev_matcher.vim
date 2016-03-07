@@ -35,8 +35,7 @@ function! ctrlp#abbrev_matcher#match(items, str, limit, mmode, ispath,
     return a:items[0:a:limit]
   endif
 
-  let results = []
-  python abbrev_matcher_vim.filter_ctrlp()
+  let results = pyeval('abbrev_matcher_vim.filter_ctrlp()')
 
   if a:mmode == 'first-non-tab' || a:mmode == 'until-last-tab'
     let greedy = 'False'
