@@ -55,6 +55,7 @@ function! s:sorter.filter(candidates, context)
           \ || ((type(kind) == type([])) && (index(kind, 'file') >= 0)))
   endif
 
+  python import abbrev_matcher_vim
   python abbrev_matcher_vim.sort_unite()
 
   return unite#util#sort_by(a:candidates, 'v:val.filter__rank')

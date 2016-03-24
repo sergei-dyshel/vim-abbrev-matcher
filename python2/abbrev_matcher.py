@@ -226,13 +226,13 @@ def rank(pattern, string, is_file=False):
             elif (prev >= 0 and _consecutive_words(string, prev, i) and
                   not _starts_bigword(string, i)):
                 log.debug('consecutuve words')
-                w = 30  # bonus for letters consecutive words
+                w = 20  # bonus for letters consecutive words
             elif prev >= 0 and _is_same_bigword(string, prev, i):
                 log.debug('within the same big word')
                 w = 50
             elif _starts_bigword(string, i):
                 log.debug('letter starting big word')
-                w = 90  # bonus letters starting big words
+                w = 70  # bonus letters starting big words
             else:
                 log.debug('normal')
                 w = 100

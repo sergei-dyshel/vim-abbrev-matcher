@@ -42,6 +42,7 @@ let s:matcher = {
       \}
 
 function! s:matcher.pattern(input) "{{{
+  python import abbrev_matcher_vim
   let regex =  pyeval(printf('abbrev_matcher_vim.highlight_regex("%s")', a:input))
   return regex
 endfunction "}}}
@@ -51,6 +52,8 @@ function! s:matcher.filter(candidates, context) "{{{
     return unite#filters#filter_matcher(
           \ a:candidates, '', a:context)
   endif
+
+  python import abbrev_matcher_vim
 
   for input in a:context.input_list
     if input == '!' || input == ''

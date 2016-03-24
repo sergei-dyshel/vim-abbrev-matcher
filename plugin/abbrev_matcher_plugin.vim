@@ -36,8 +36,6 @@ if !has('python')
   finish
 endif
 
-python import abbrev_matcher_vim
-
 if !exists('g:abbrev_matcher_grep_exe')
     let g:abbrev_matcher_grep_exe = has('win32') ? 'grep.exe' : 'grep'
 endif
