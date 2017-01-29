@@ -1,19 +1,23 @@
 #!/usr/bin/env python
 
 import unittest
-from abbrev_matcher import *
+import abbrev_matcher
+
+import os.path
 
 
 class BaseTest(unittest.TestCase):
     def assert_filter(self, pattern, matching=[], not_matching=[]):
         all_strings = matching + not_matching
-        inds = filter_grep(make_regex(pattern), all_strings)
-        self.assertEqual(inds, range(len(matching)))
+        inds = abbrev_matcher.filter_grep(
+            abbrev_matcher.make_regex(pattern), all_strings)
+        self.assertEqual(inds, list(range(len(matching))))
 
     def assert_ranked(self, pattern, strings, **kwargs):
         self.assert_filter(pattern, matching=strings)
-        ranked = sorted(reversed(strings),
-                        key=lambda s: rank(pattern, s, **kwargs))
+        ranked = sorted(
+            reversed(strings),
+            key=lambda s: abbrev_matcher.rank(pattern, s, **kwargs))
         self.assertEqual(ranked, strings)
 
     def assert_ranked_files(self, pattern, path_lists):
@@ -37,7 +41,7 @@ class TestRank(BaseTest):
 
     def test_basic(self):
         # consecutive letters
-        self.assert_ranked('foobar', ['some_foobar', 'foo_bar'])
+        self.assert_ranked('foobar', ['foo_bar', 'some_foobar'])
 
         # consecutive words
         self.assert_ranked('fb', ['foo_bar_qux', 'foo_qux_bar'])

@@ -31,7 +31,7 @@ if exists("g:loaded_abbrev_matcher")
   finish
 endif
 
-if !has('python')
+if !has('python') && !has('python3')
   echoerr 'abbrev_matcher: you need vim compiled with +python support'
   finish
 endif

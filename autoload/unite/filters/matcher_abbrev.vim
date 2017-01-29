@@ -41,8 +41,18 @@ let s:matcher = {
       \ 'description' : 'abbrev matcher',
       \}
 
+function! s:import_module()
+  if has('python')
+    python import abbrev_matcher_vim
+  elseif has('python3')
+    python3 import abbrev_matcher_vim
+  else
+    throw 'No Python support detected!'
+  endif
+endfunction
+
 function! s:matcher.pattern(input) "{{{
-  python import abbrev_matcher_vim
+  call s:import_module()
   let regex =  pyeval(printf('abbrev_matcher_vim.highlight_regex("%s")', a:input))
   return regex
 endfunction "}}}
@@ -53,7 +63,7 @@ function! s:matcher.filter(candidates, context) "{{{
           \ a:candidates, '', a:context)
   endif
 
-  python import abbrev_matcher_vim
+  call s:import_module()
 
   for input in a:context.input_list
     if input == '!' || input == ''
@@ -64,7 +74,11 @@ function! s:matcher.filter(candidates, context) "{{{
       continue
     endif
 
-    python abbrev_matcher_vim.filter_unite()
+    if has('python')
+      python abbrev_matcher_vim.filter_unite()
+    elseif has('python3')
+      python3 abbrev_matcher_vim.filter_unite()
+    endif
   endfor
 
   return a:candidates

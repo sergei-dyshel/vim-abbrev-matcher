@@ -158,6 +158,10 @@ def which(exe):
             return found
     return exe
 
+def _auto_bytes(str_or_bytes):
+    if isinstance(str_or_bytes, str):
+        return str_or_bytes.encode('utf-8')
+    return str_or_bytes
 
 def filter_grep(regex, strings, cmd='grep -E -n'):
     """Return list of indexes in `strings` which match `regex`"""
@@ -176,7 +180,10 @@ def filter_grep(regex, strings, cmd='grep -E -n'):
     except BaseException as exc:
         msg = 'Exception when executing "{}": {}'.format(cmd_str, exc)
         raise Exception(msg)
-    out, err = grep.communicate('\n'.join(strings))
+    out_b, err_b = grep.communicate(b'\n'.join(_auto_bytes(s) for s in strings))
+    out = out_b.decode('utf-8')
+    err = err_b.decode('utf-8')
+
     if err or grep.returncode == 2:
         msg = 'Command "{}" exited with return code {} and stderr "{}"'.format(
             cmd_str, grep.returncode, err.strip())
