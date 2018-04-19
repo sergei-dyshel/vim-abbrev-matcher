@@ -1,3 +1,9 @@
+DISCLAIMER
+==========
+
+This plugin is NO longer maintained. Generally I prefer and advise to use terminal-based searching (e.g [fzf.vim](https://github.com/junegunn/fzf.vim)) to 
+normal buffer based implementations (Unite, Denite, CtrlP etc.).
+
 vim-abbrev-matcher
 ==================
 
