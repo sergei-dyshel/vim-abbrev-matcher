@@ -2,7 +2,7 @@ DISCLAIMER
 ==========
 
 This plugin is NO longer maintained. Generally I prefer and advise to use terminal-based searching (e.g [fzf.vim](https://github.com/junegunn/fzf.vim)) to 
-normal buffer based implementations (Unite, Denite, CtrlP etc.).
+normal buffer based implementations (Unite, Denite, CtrlP etc.). For that I've modified `fzf` as [fzf-abbrev](https://github.com/sergei-dyshel/fzf-abbrev) to use abbreviation fuzzy matching.
 
 vim-abbrev-matcher
 ==================
